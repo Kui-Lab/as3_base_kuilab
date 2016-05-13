@@ -457,32 +457,49 @@ package kuilab_com.concurrent
 		private function runWithCountAmount():void
 		{
 			clearTimeout( clkId ) ; clkId = -1 ;
+			var runSub:Boolean = Boolean( subLoop )
 			if( idx < lastI ){
 				try{
 					func.apply( thisObj, getLoopArg() ) ;
 				}catch( err:* ){
 					switch( err ){
-						case LOOPER_def.ISTT_continue :
-							breakFr = true ;//////为了阻止下级的执行。
+						case LOOPER_def.ISTT_continue ://还是return？
+							runSub = false ;
 							break ;
 						case LOOPER_def.ISTT____break :
 							return void finish( true ) ;
 						default :
-							if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT )
+							var istt:* = onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) ;
+							if( istt == LOOPER_def.ABORT ){
+								//这里对curExing可能应该改变。
 								return void finish( true ) ;
+							}else///阻止下级的执行。
+								runSub = false ;
+							kuilab::dbg{
+							if( istt == LOOPER_def.ISTT___repeat ){
+								runSub = false ;
+								idx -- ;//下面的idx++还会执行，和为0所以下一循环的idx不变.
+							}
+						}
+							
 					}
 				}
-				if( subLoop ){
-					curExing = subLoop ;
-					return ;
-				}else
+				if( ! runSub )
 					idx ++ ;
-				if( breakFr || subLoop )
-				{}else
-					clkId = setTimeout( runWithCountAmount, 1 ) ;
-			}else//没有重置break开关。
-				if( ! breakFr )
-					clkId = setTimeout( runWithCountAmountLast, 1 ) ;
+			}else{
+				var last:Boolean = true ;
+				runSub = false ;
+			}
+			if( ! breakFr ){
+				if( runSub ){
+					curExing = subLoop ;
+					stat = LOOPER_def.STAT_EXE__SUB ;
+					setTimeout( subLoop.exe , 1 )
+				}else
+					clkId = setTimeout( last ? runWithCountAmountLast : runWithCountAmount , 1 ) ;
+			}else{
+				kuilab::dbg{ dbgNxtFr = true ; }
+			}
 		}
 			private function runWithCountAmountLast():void
 			{
@@ -492,6 +509,7 @@ package kuilab_com.concurrent
 				}catch( err:* ){
 					switch( err ){
 						case LOOPER_def.ISTT_continue :
+							finish( true ) ;
 							break ;
 						case LOOPER_def.ISTT____break :
 							return void finish( true ) ;
@@ -502,6 +520,7 @@ package kuilab_com.concurrent
 				}
 				if( subLoop != null ){//没有下级就执行完毕，有下级就开始下级的最后一组迭代。
 					curExing = subLoop ;
+					stat = LOOPER_def.STAT_EXE__SUB ;
 				}else
 					finish( false ) ;
 			}
@@ -518,20 +537,27 @@ package kuilab_com.concurrent
 					//不用白不用，如果不指定this,那么函数中的this将会是global。
 				}catch( err:* ){
 					switch( err ){
-						case LOOPER_def.ISTT_continue ://还是return？这里也许要判断是不是要进入last？
+						case LOOPER_def.ISTT_continue ://还是return？
 							runSub = false ;
 							break ;
 						case LOOPER_def.ISTT____break :
 							return void finish( true ) ;
 						default :
-							if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT ){
+							var istt:* = onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) ;
+							if( istt == LOOPER_def.ABORT ){
 							//这里对curExing可能应该改变。
 								return void finish( true ) ;
-							}else{///阻止下级的执行。
+							}else///阻止下级的执行。
 								runSub = false ;
+						kuilab::dbg{
+							if( istt == LOOPER_def.ISTT___repeat ){
+								runSub = false ;
+								idx -- ;//下面的idx++还会执行，和为0所以下一循环的idx不变.
 							}
-					}
+						}
+							
 				}
+			}
 				/*if( breakFr || runSub  )//这里breakFr好像多余了!!!!!!!!!!//这个放在try里面也可以？因为func抛错的话
 				{	return }else{//if( idx == length-1 ){}
 				}//改成出帧时取消？--------------*/
@@ -546,7 +572,7 @@ package kuilab_com.concurrent
 				}else{
 					if( !last )
 						idx ++ ;//本来这句在大if里面的，现在拿出来，last真时就不执行了。
-				}*/
+				}这段优化后就是if里面最后那句if( ! runSub ) */
 				if( ! breakFr ){//要调试一下，确认下一帧执行的是不是到这个函数。
 					if( runSub ){
 						curExing = subLoop ;
@@ -558,7 +584,7 @@ package kuilab_com.concurrent
 					kuilab::dbg{ dbgNxtFr = true ; }
 				}
 					//clkId = setTimeout( runWithCountArray, 1 ) ;//最后一项时，这次timeout是多余的，虽然执行时会finish()//试试0？	
-		}	
+		}//可以为Vector再写个效率更高的。
 			/**为了在循环体函数里少一个判断，把最后一次循环另外写了一个函数。**/
 			private function runWithCountArrayLast( ):void
 			{	
@@ -567,7 +593,7 @@ package kuilab_com.concurrent
 					func.apply( thisObj, getLoopArg() ) ;
 				}catch( err:* ){
 					switch( err ){
-						case LOOPER_def.ISTT_continue :
+						case LOOPER_def.ISTT_continue ://最后一次迭代，给出continue也是要finish。
 							finish( true ) ;//breakFr = true ;//////为了阻止下级的执行。
 							return ;
 						case LOOPER_def.ISTT____break :
@@ -579,6 +605,7 @@ package kuilab_com.concurrent
 				}
 				if( subLoop != null ){
 					curExing = subLoop ;
+					stat = LOOPER_def.STAT_EXE__SUB ;
 				}else
 					finish( false ) ;
 			}
@@ -586,32 +613,43 @@ package kuilab_com.concurrent
 		private function runWithCountTable():void
 		{
 			clearTimeout( clkId ) ; clkId = -1 ;
+			var runSub:Boolean = Boolean( subLoop )
 			if( idx < len ) {
 				var k:* = keys[ idx ] ;//keys.shift() ;
 				try{
 					func.apply( thisObj, getLoopArg() ) ;
 				}catch( err:* ){
 					switch( err ){
-						case LOOPER_def.ISTT_continue :
-							breakFr = true ;
+						case LOOPER_def.ISTT_continue ://还是return？
+							runSub = false ;
 							break ;
 						case LOOPER_def.ISTT____break :
 							return void finish( true ) ;
 						default :
-							if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT )
+							var istt:* = onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) ;
+							if( istt == LOOPER_def.ABORT ){
+								//这里对curExing可能应该改变。
 								return void finish( true ) ;
+							}else///阻止下级的执行。
+								runSub = false ;
 					}
 				}
-				if( subLoop ){
-					curExing = subLoop ;
-					return ;
-				}else
+				if( ! runSub )
 					idx ++ ;
-				if( breakFr || subLoop )
-				{}else
-					clkId = setTimeout( runWithCountTable, 1 ) ;
-			}else//while( k == null && keys.length == 0 )
-				clkId = setTimeout( runWithCountTableLast, 1 ) ;
+			}else{//while( k == null && keys.length == 0 )
+				var last:Boolean = true ;
+				runSub = false ;////目前的错误是上级循环的最后一次循环没执行(但下级执行了)，这时为了将逻辑导向执行xxxLast()
+			}
+			if( ! breakFr ){//要调试一下，确认下一帧执行的是不是到这个函数。
+				if( runSub ){
+					curExing = subLoop ;
+					stat = LOOPER_def.STAT_EXE__SUB ;
+					setTimeout( subLoop.exe , 1 )//本来是在startStack中的执行下级的，为了不浪费当前帧剩下的时间改在这里。
+				}else
+					clkId = setTimeout( last ? runWithCountTableLast : runWithCountTable , 1 ) ;//如果这时已进入下一帧则可能造成逻辑错误等，目前在进出帧时做了调试检查。
+			}else{
+				//kuilab::dbg{ dbgNxtFr = true ; }
+			}
 		}
 				private function runWithCountTableLast():void
 				{
@@ -619,11 +657,10 @@ package kuilab_com.concurrent
 					var k:* = keys[ idx ] ;//keys.shift() ;
 					try{
 						func.apply( thisObj, getLoopArg() ) ;
-						finish( false ) ;
 					}catch( err:* ){
 						switch( err ){
 							case LOOPER_def.ISTT_continue :
-								break ;
+								return void finish( true ) ;
 							case LOOPER_def.ISTT____break :
 								return void finish( true ) ;
 							default :
@@ -633,6 +670,7 @@ package kuilab_com.concurrent
 					}
 					if( subLoop != null ){
 						curExing = subLoop ;
+						stat = LOOPER_def.STAT_EXE__SUB ;
 					}else
 						finish( false ) ;
 				}
@@ -976,7 +1014,7 @@ package kuilab_com.concurrent
 			idx = 0 ;
 			if( dataSetModifed ){
 				if( dataOrInheritWhat is Function ){
-					dataSet = dataOrInheritWhat( parent.getLoopProps(), this.loopProps ) ;//参数有待商榷。。。。
+					dataSet = dataOrInheritWhat( parent.getLoopProps(), loopProps ) ;//参数有待商榷。。。。
 					if( dataSet == VALUE_notFound )
 					{}
 				}else if( dataOrInheritWhat is LoopDataSet ){
@@ -1032,7 +1070,7 @@ package kuilab_com.concurrent
 			loopProps = LoopProps.doNew( this ) ;
 			return loopProps ;
 		}
-		
+		/**设计未最终决定。**/
 		public function getProp( name:* ):*
 		{
 			if( loopProps )

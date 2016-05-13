@@ -21,6 +21,7 @@ package kuilab_com.concurrent
 		public static const ISTT_continue:* = new Pair( '终止当前循环并执行下一次。break current loop and start next loop' ) ;
 		public static const ISTT____error:* = new Pair( '发生了错误' ) ;
 		public static const ISTT____break:* = new Pair( 'break loop 终止循环' ) ;
+		kuilab::dbg public static const ISTT___repeat:* = new Pair( '重新执行前次循环' ) ;//调试用。
 		
 		/**执行完毕自然成为此状态。**/
 		public static const STAT_OVER:* = '完了。Complete。' ;
