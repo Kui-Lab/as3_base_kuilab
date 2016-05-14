@@ -419,6 +419,8 @@ package kuilab_com.concurrent
 			}
 			if( subLoop ){
 				curExing = subLoop ;
+				stat = LOOPER_def.STAT_EXE__SUB ;
+				clkId = setTimeout( subLoop.exe , 1 )
 				return ;
 			}
 			if( breakFr || subLoop )
@@ -444,11 +446,14 @@ package kuilab_com.concurrent
 							return void finish( true ) ;
 				}
 			}
-			if( subLoop ){//如有下级循环，需待下级循环执行才在onSubProg完成才步进。
+			if( subLoop ){
 				curExing = subLoop ;
+				stat = LOOPER_def.STAT_EXE__SUB ;
+				clkId = setTimeout( subLoop.exe , 1 )
 				return ;
-			}else
-				idx ++ ;//如果移到函数开头，则从0开始执行的开始前要把序号设置为-1。
+			}else{
+				idx ++ ;
+			}
 			if( breakFr || subLoop )
 			{}else
 				clkId = setTimeout( runCeaseless, 1 ) ;
@@ -577,7 +582,8 @@ package kuilab_com.concurrent
 					if( runSub ){
 						curExing = subLoop ;
 						stat = LOOPER_def.STAT_EXE__SUB ;
-						setTimeout( subLoop.exe , 1 )//本来是在startStack中的执行下级的，为了不浪费当前帧剩下的时间改在这里。
+						setTimeout( subLoop.exe , 1 )//本来是在startStack中启动执行下级的，为了不浪费当前帧剩下的时间改在这里。
+						//就为了这个目的，本来很简单的代码，变得这么复杂了。
 					}else
 						clkId = setTimeout( last ? runWithCountArrayLast : runWithCountArray , 1 ) ;//如果这时已进入下一帧则可能造成逻辑错误等，目前在进出帧时做了调试检查。
 				}else{
