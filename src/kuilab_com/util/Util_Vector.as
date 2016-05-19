@@ -12,13 +12,13 @@ package kuilab_com.util
 		public static const AUTO_SET_FIX_alaway:uint = 0;
 		public static const AUTO_SET_FIX_if
 		
-		public static function isVectorOrArray( obj:Object, isXMLList:Boolean=false ):Boolean
+		public static function isVectorOrArray( obj:Object, orIsXMLList:Boolean=false ):Boolean
 		{
 			if( obj is Array )
 				return true ;
 			if( obj is Vector.<*> )
 				return true ;
-			if( isXMLList )
+			if( orIsXMLList )
 			if( obj is XMLList )
 				return true ;
 			return false ;

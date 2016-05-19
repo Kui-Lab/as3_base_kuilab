@@ -5,7 +5,6 @@ package kuilab_com.concurrent
 	import flash.events.Event;
 	import flash.events.IEventDispatcher;
 	import flash.utils.Dictionary;
-	import flash.utils.clearInterval;
 	import flash.utils.clearTimeout;
 	import flash.utils.setTimeout;
 	
@@ -16,7 +15,6 @@ package kuilab_com.concurrent
 	import kuilab_com.lang.Pair;
 	import kuilab_com.nameSpaceKuilab;
 	import kuilab_com.util.Util_Vector;
-	import kuilab_com.util.Util_object;
 
 	/**
 	 * <pre>在帧渲染的间隙进行计算。实现后台并行的进程。
@@ -25,19 +23,19 @@ package kuilab_com.concurrent
 	 * Adobe官方的线程就是在一个虚拟机里面同时跑两个swf，要通信还要setAlias(),
 	 * 而且线程代码要多编译一次，太烂了(或者自己加载自己，太stupid、freak)。
 	 * 
-	 * 额外的特性：
-	 * 可添加下级循环体以模拟嵌套循环。
+	 * *可添加下级循环体以实现嵌套循环。
 	 * 
 	 * 上下级循环之间的通信方式：
 	 * 1.使用专用的propToSub对象，方法是loogArgType参数设置为LOOP_ARG__all（在常量定义类）。
 	 * 2.使用“this”对象继承，如果不喜欢或不能使用第一种方式那么使用这种。要求的条件是下级被循环函数是嵌套或匿名函数，它创建时的thisObj参数设置为THIS_parent。
 	 * 3.在可能的任意作用域内共享，比如上下级循环函数体所在的同一个函数、某静态类上的变量等等。
 	 * 
-	 * 还未实现：暂停的任务重新启动。
 	 * 
 	 * 写成两个类比较容易弄懂，但是觉得没有必要再花时间拆了，反正api（public方法）也没超过十个。
 	 * </pre>
 	 */
+	
+	//%%TODO 暂停的任务重新启动。
 	use namespace nameSpaceKuilab ;
 	public class DaemonLoop 
 	{
@@ -150,8 +148,7 @@ package kuilab_com.concurrent
 									loopArgType:* = null, thisObj:*=null, priority:uint=0 ):DaemonLoop{
 			var ins:DaemonLoop = new DaemonLoop( DenyNewing.INSTANCE ) ;
 			ins.func = func ;
-			{ use namespace nameSpaceKuilab ;
-			ins.dataSet = dataSet };
+			ins.dataSet = dataSet ;
 			ins.onProg_ = onProg ;
 			ins.setThisToFunc( thisObj ) ;
 			/*if( parent )//这里没有做检查是否已经有sub。
@@ -205,36 +202,35 @@ package kuilab_com.concurrent
 		
 		protected function startStack():void//不应叫做startStack，而是startCur。
 		{
-			if( getRoot( this ) == this )
-			{}
+			//if( getRoot() == this )
 			kuilab::dbg{ 
 				/*{ use namespace nameSpaceKuilab ;
 					if( breakFr )
 						trace( '渲染超时；cpu超负荷1' ) ;
 				}*/
 				if( dbgNxtFr ){
-				trace( 'start():dbgNxtFr!' ) ;//enterDebugger() ;
-				dbgNxtFr = false ;
-			} } ;
+				//trace( 'start():dbgNxtFr!' ) ;//enterDebugger() ;
+					dbgNxtFr = false ;
+				}
+				if( breakFr )///%%TODO应该想个办法让DaemonLoop的帧事件在其它逻辑之后触发，然后检查这一帧是不是已用尽，用尽直接跳过这一帧。
+					trace( '-------发现了拥挤帧---------' ) ;
+			} ;
 			
 			/*var isResume:Boolean
 			if( isResume ){//自己不执行，直接从子级中断的地方执行。
 				'每帧的中断与手动的暂停有何区别？'
 			}*/
-			if( curExing == this ){	;//curExing平时应该是sub，只有当sub完成时，才是子级
+			if( curExing == this ){	;//这个判断现在是多余的。
 				stat = LOOPER_def.STAT_EXE_SELF ;//这里总是这个状态，是不会在需要的时候重置的。
 				exe( ) ;
 			}
 			
 			//if( subLoop ){
 				/**要不要自己先执行，实质问题是下级循环在上级循环代码相对顺序位置问题。
-				不实现afterSub特性，就只能在之前和之后选择。即使上级先运行一次，也难以解决当前索引与项目问题。
-				 要么在开始前手动处理（执行上级的部分内容），这样满足下级执行所需的条件。
-				 *执行一次上级，然后reset、执行下级：怪异
-				 *克隆副本？每次循环都要克隆。效率太低。
+				不实现afterSub特性（一个循环体两个函数分别在下级执行前后执行，复杂度会增加所以不实现），就只能在之前和之后选择。即使上级先运行一次，也难以解决当前索引与项目问题。
+				 要么在开始前手动处理，执行下级的初始化。
 				 *索引初始置-1？执行的次数会多1次，且要求idx++在开头
-				 *加参数控制索引步进的时机。
-				 *把索引步进放在onSubProg里面执行？
+				 *加参数控制索引步进的时机？
 				 *子级循环完成时（onSubProg）执行索引步进，一般编程语言本身也是在循环完成后步进索引的，即使for()里面把i++写成++i
 				 * **/
 				
@@ -286,7 +282,7 @@ package kuilab_com.concurrent
 		/**只停止它自己（包括所有子级与上级），之后的一个顶级会执行。</br>如果要全部停止，请使用静态的pause()方法。**/
 		public function pauseStack( startAtIdle:Boolean=false ):Boolean
 		{
-			if( getRoot( curExing ) != getRoot() )
+			if( curExing.getRoot( ) != getRoot() )
 				{ return false ;}//自己所在链/栈并不是在执行的。
 			if( parent == null ){
 				cancelAndClearTimeout() ;//可以不执行？ 
@@ -294,7 +290,7 @@ package kuilab_com.concurrent
 				startNext( this, false ) ;//一个栈只执行一次
 				return true ;
 			}else{
-				return getRoot(this).pauseStack() ;
+				return this.getRoot().pauseStack() ;
 			}
 		}
 			protected function pauseStackProc( stop:Boolean=false ):*{
@@ -312,7 +308,7 @@ package kuilab_com.concurrent
 		/**现在还未实现插队立即执行。另写一个方法还是加个参数实现？？？？？？？？？？？？？？？？？？？？？？**/
 		protected function resumeStack( ):*
 		{
-			resumeProc( getRoot( this ) ) ;
+			resumeProc( this.getRoot() ) ;
 			
 			function resumeProc( loop:DaemonLoop ):*{
 				loop.stat = LOOPER_def.STAT_PAUS ;
@@ -341,7 +337,7 @@ package kuilab_com.concurrent
 		protected function finish( abort:Boolean=false ):void//可以再加一个参数，以实现return
 		{
 			stat = LOOPER_def.STAT_OVER ;
-			var msg:LoopExeuteMessage =  new LoopExeuteMessage( this, abort? LOOPER_def.ABORT : LOOPER_def.FINISH ) ;
+			var msg:LoopExeuteMessage =  new LoopExeuteMessage( this, abort? LOOPER_def.EVT_abort : LOOPER_def.EVT_finish ) ;
 			try{
 				onProg_( msg ) ;
 			}catch( err1:* ){}
@@ -413,7 +409,7 @@ package kuilab_com.concurrent
 					case LOOPER_def.ISTT____break :
 						return void finish( true ) ;
 					default :
-						if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT )
+						if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ISTT____break )
 							return void finish( true ) ;
 				}
 			}
@@ -431,22 +427,33 @@ package kuilab_com.concurrent
 		private function runCeaselessWithCount():void
 		{
 			clearTimeout( clkId ) ; clkId = -1 ;
+			var runSub:Boolean = Boolean( subLoop )
 			try{
 				if( func.apply( thisObj, getLoopArg() ) == LOOPER_def.ISTT____break )
 					return void finish( false ) ;
 			}catch( err:* ){
 				switch( err ){
-					case LOOPER_def.ISTT_continue :
-						breakFr = true ;//为了阻止下级的执行。
+					case LOOPER_def.ISTT_continue ://还是return？
+						runSub = false ;
 						break ;
 					case LOOPER_def.ISTT____break :
 						return void finish( true ) ;
 					default :
-						if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT )
+						var istt:* = onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) ;
+						if( istt == LOOPER_def.ISTT____break ){
+							//这里对curExing可能应该改变。
 							return void finish( true ) ;
+						}else///阻止下级的执行。
+							runSub = false ;
+						kuilab::dbg{
+						if( istt == LOOPER_def.ISTT___repeat ){
+							runSub = false ;
+							idx -- ;//下面的idx++还会执行，和为0所以下一循环的idx不变.
+						}
+					}
 				}
 			}
-			if( subLoop ){
+			if( runSub ){
 				curExing = subLoop ;
 				stat = LOOPER_def.STAT_EXE__SUB ;
 				clkId = setTimeout( subLoop.exe , 1 )
@@ -454,9 +461,16 @@ package kuilab_com.concurrent
 			}else{
 				idx ++ ;
 			}
-			if( breakFr || subLoop )
-			{}else
-				clkId = setTimeout( runCeaseless, 1 ) ;
+			if( ! breakFr ){
+				if( runSub ){
+					curExing = subLoop ;
+					stat = LOOPER_def.STAT_EXE__SUB ;
+					setTimeout( subLoop.exe , 1 )
+				}else
+					clkId = setTimeout( runCeaselessWithCount , 1 ) ;
+			}else{
+				//kuilab::dbg{ dbgNxtFr = true ; }
+			}
 		}
 		
 		private function runWithCountAmount():void
@@ -475,7 +489,7 @@ package kuilab_com.concurrent
 							return void finish( true ) ;
 						default :
 							var istt:* = onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) ;
-							if( istt == LOOPER_def.ABORT ){
+							if( istt == LOOPER_def.ISTT____break ){
 								//这里对curExing可能应该改变。
 								return void finish( true ) ;
 							}else///阻止下级的执行。
@@ -483,10 +497,8 @@ package kuilab_com.concurrent
 							kuilab::dbg{
 							if( istt == LOOPER_def.ISTT___repeat ){
 								runSub = false ;
-								idx -- ;//下面的idx++还会执行，和为0所以下一循环的idx不变.
-							}
-						}
-							
+								idx -- ;//下面的idx++还会执行，和为0所以下一循环的idx不变,达到下一循环重复这一循环的目的.
+							}}
 					}
 				}
 				if( ! runSub )
@@ -503,7 +515,7 @@ package kuilab_com.concurrent
 				}else
 					clkId = setTimeout( last ? runWithCountAmountLast : runWithCountAmount , 1 ) ;
 			}else{
-				kuilab::dbg{ dbgNxtFr = true ; }
+				//kuilab::dbg{ dbgNxtFr = true ; }
 			}
 		}
 			private function runWithCountAmountLast():void
@@ -519,7 +531,7 @@ package kuilab_com.concurrent
 						case LOOPER_def.ISTT____break :
 							return void finish( true ) ;
 						default :
-							if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT )
+							if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ISTT____break )
 								return void finish( true ) ;
 					}
 				}
@@ -549,7 +561,7 @@ package kuilab_com.concurrent
 							return void finish( true ) ;
 						default :
 							var istt:* = onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) ;
-							if( istt == LOOPER_def.ABORT ){
+							if( istt == LOOPER_def.ISTT____break ){
 							//这里对curExing可能应该改变。
 								return void finish( true ) ;
 							}else///阻止下级的执行。
@@ -587,7 +599,7 @@ package kuilab_com.concurrent
 					}else
 						clkId = setTimeout( last ? runWithCountArrayLast : runWithCountArray , 1 ) ;//如果这时已进入下一帧则可能造成逻辑错误等，目前在进出帧时做了调试检查。
 				}else{
-					kuilab::dbg{ dbgNxtFr = true ; }
+					//kuilab::dbg{ dbgNxtFr = true ; }
 				}
 					//clkId = setTimeout( runWithCountArray, 1 ) ;//最后一项时，这次timeout是多余的，虽然执行时会finish()//试试0？	
 		}//可以为Vector再写个效率更高的。
@@ -605,7 +617,7 @@ package kuilab_com.concurrent
 						case LOOPER_def.ISTT____break :
 							return void finish( true ) ;
 						default :
-							if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT )
+							if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ISTT____break )
 								return void finish( true ) ;
 					}
 				}
@@ -633,7 +645,7 @@ package kuilab_com.concurrent
 							return void finish( true ) ;
 						default :
 							var istt:* = onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) ;
-							if( istt == LOOPER_def.ABORT ){
+							if( istt == LOOPER_def.ISTT____break ){
 								//这里对curExing可能应该改变。
 								return void finish( true ) ;
 							}else///阻止下级的执行。
@@ -670,7 +682,7 @@ package kuilab_com.concurrent
 							case LOOPER_def.ISTT____break :
 								return void finish( true ) ;
 							default :
-								if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ABORT )
+								if( onProg_( new LoopExeuteMessage( this, LOOPER_def.ISTT____error, err ) ) == LOOPER_def.ISTT____break )
 									return void finish( true ) ;
 						}
 					}
@@ -687,10 +699,10 @@ package kuilab_com.concurrent
 			try{ 
 				/*if( breakFr )
 					return ;*/
-				if( func.apply( thisObj, getLoopArg() ) == LOOPER_def.ABORT )
+				if( func.apply( thisObj, getLoopArg() ) == LOOPER_def.ISTT____break )
 					finish( true ) ;
 			}catch( err:* ){
-				if( onProg_( err ) == LOOPER_def.ABORT )
+				if( onProg_( err ) == LOOPER_def.ISTT____break )
 					finish( true ) ;
 			}
 			if( breakFr )
@@ -758,8 +770,8 @@ package kuilab_com.concurrent
 		public function setSubLoop( loopFunc:Function, onProg:Function, loopArg:*, dataNameOrGetFun:*='item', thisObj:*=null ):DaemonLoop
 		{
 			if( subLoop )
-				throw new Error( KuilabERROR.programingLogicMistak( 'K0ksSn53' ) ) ;
-			if( getRoot().isRunningThis() )
+				throw new Error( KuilabERROR.programingLogicMistak( 'K0ksSn53' ) ) ;//%%TODO 替换下级循环体。
+			if( getRoot().isRunning( false ) )
 			if( stat != LOOPER_def.STAT_WAIT )
 				throw new Error( 'RkOSo04v' ) ;
 			var a:DaemonLoop = new DaemonLoop( DenyNewing.INSTANCE ) ;
@@ -776,7 +788,7 @@ package kuilab_com.concurrent
 			//a.reset( true ) ;//下级在第一次开始之前要chkLoopType，但如果数据是由上级而来，就不能在执行前初始化。
 			subLoop.exe = function():*{
 			//if( Util_Vector.contins( [ LOOPER_def.STAT_WAIT,LOOPER_def.STAT_OVER ], subLoop.stat ) ) //'下级需要重置' )//onSubProg中执行的话，第一次就执行不到。
-				subLoop.reset( true ) ;//惰性技巧，难得一用。exe会在reset中被赋值。
+				subLoop.reset( true ) ;///惰性技巧，难得一用。exe会在reset中被赋值。
 				subLoop.exe( ) ;
 			}
 			return a ;
@@ -891,7 +903,7 @@ package kuilab_com.concurrent
 		protected function onSubProg( r:LoopExeuteMessage ):void
 		{
 			switch( r.title ){
-				case LOOPER_def.FINISH://sub执行完结。
+				case LOOPER_def.ISTT___finish ://sub执行完结。
 					c::d0{ trace( 'sub done@', idx ) ;
 					  }
 					if( isLastLoop() )//因为有下级时runXxx函数是难以自己直接执行finish()的，那么只能在此时判断。
@@ -915,7 +927,7 @@ package kuilab_com.concurrent
 						curExing = this ;//exe() ;//自己没有判断结束。自己是最后一循环时再执行这个就是逻辑错误。
 					}
 					break ;
-				case LOOPER_def.ABORT ://如果要终止上级循环，应专门设计一个指令。但目前未实现下级终止上级，这也不是必需的，且可手动终止上级。
+				//case LOOPER_def.ABORT ://如果要终止上级循环，应专门设计一个指令。但目前未实现下级终止上级，这也不是必需的，且可手动终止上级。
 				case LOOPER_def.ISTT____break ://根ABORT同义。下级的break应该传递给上级FINISH。
 					enterDebugger() ;
 					throw new Error( 'jtWErXhTPe' ) ;
@@ -965,8 +977,11 @@ package kuilab_com.concurrent
 			return true ;
 		}
 		
-		protected function isRunningThis():Boolean
+		protected function isRunning( orLineal:Boolean=true ):Boolean
 		{
+			if( orLineal ){
+				return( getRoot() == curExing.getRoot( ) )
+			}
 			if( curExing != this )
 				return false ;
 			return true ; 
@@ -1020,7 +1035,7 @@ package kuilab_com.concurrent
 			idx = 0 ;
 			if( dataSetModifed ){
 				if( dataOrInheritWhat is Function ){
-					dataSet = dataOrInheritWhat( parent.getLoopProps(), loopProps ) ;//参数有待商榷。。。。
+					dataSet = dataOrInheritWhat( parent.getLoopProps(), loopProps ) ;
 					if( dataSet == VALUE_notFound )
 					{}
 				}else if( dataOrInheritWhat is LoopDataSet ){
@@ -1034,8 +1049,7 @@ package kuilab_com.concurrent
 			}
 		}
 		
-		
-		/**因为官方SDK不能inline，而由外部调用又因为只能读public的成员，所以我很傻的从Utils复制了这个函数导致增加了三十多行代码。**/
+		/**因为官方SDK不能inline，而由外部调用又因为只能读public的成员，所以我很傻的从Utils复制了这个函数导致增加了大概二十行代码。**/
 		protected function getPropByPathF( obj:Object, names:*, spliter:String='.', getObjArr:Boolean=false ):*
 		{
 			var nameArr:Array ;
@@ -1063,7 +1077,8 @@ package kuilab_com.concurrent
 		}
 		/**对一个循环体进行重置的方法。如果默认的reset()方法不能达到目的，那么使用自己编写的重置方法就可以直接替换而不用扩展子类。<br/>
 		 * 访问相关成员时如果需要请使用命名空间。reset方法执行时如果dataSetUpdated参数为true默认会执行chkLoopType()这个方法，
-		 * 传入的这个客制化函数如果返回非假的值，那么将不执行默认的重置逻辑。**/
+		 * 传入的这个客制化函数如果返回非假的值，那么将不执行默认的重置逻辑。
+		 * **/
 		public function set resetFunction( f:Function ):void
 		{
 			resetF = f ;
@@ -1083,20 +1098,19 @@ package kuilab_com.concurrent
 				return loopProps.getUpperValue( name ) ;
 			return null ;
 		}
-		/**未实现**/
-		public function setOpts( resetFunc:Function, backupDataForReset:Boolean ):void
+		
+		/*public function setOpts( resetFunc:Function, backupDataForReset:Boolean ):void
 		{
 			
 			function backupData():void
 			{
-				
 			}
-		}
+		}*/
 		
-		protected function getRoot( instance:DaemonLoop=null ):DaemonLoop
+		protected function getRoot( ):DaemonLoop
 		{
-			if( instance == null )
-				instance = this ;
+			//if( instance == null )
+			var instance:DaemonLoop = this ;
 			while( instance.parent )
 				instance = instance.parent ;
 			return instance ;

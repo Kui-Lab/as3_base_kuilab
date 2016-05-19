@@ -17,12 +17,16 @@ package kuilab_com.util
 		public static const NODEKIND_text:String = 'text' ;
 		public static const NODEKIND_attribute:String = 'attribute' ;
 		
-		public static function getAttOrChild( xml:XML, name:Object ):XML
+		public static function getAttOrChild( xml:XML, name:*, toString:Boolean=false ):*
 		{
 			var r:XMLList = xml.attribute( name ) ;
-			if( r.length() > 0 )
-				return r[0] ;
-			return xml.child( name )[0] ;
+			if( r.length() == 0 )
+				r = xml.child( name ) ;
+			if( r.length() == 0 )
+				return null ;
+			if( toString )
+				return r[0].toString() ;
+			return r[0] ;
 		}
 		
 		public static function getChildByAtt( xml:XML, attName:Object, attValue:String ):XML

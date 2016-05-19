@@ -1,6 +1,6 @@
 package kuilab_com.concurrent
 {
-	import kuilab_com.lang.Pair;
+	import kuilab_com.lang.PairConst;
 
 	public class LOOPER_def
 	{
@@ -8,20 +8,27 @@ package kuilab_com.concurrent
 		{
 		}
 		
-		/*当执行函数时发生错误，会将错误交给错误响应函数处理，（如果设置了的话）如果返回这个值，就终止。**/
-		public static const ABORT:* = 'VALUE_ABORT' ;
+		
+		
+		
+		public static const ISTT___finish:* = '完了complete 。' ;
+		public static const ISTT____pause:* = '暂停直到空闲。Pause until idle.' ;
+		public static const ISTT_____stop:* = '停止。Stop'  ;
+		/**作为循环体执行的函数，执行时抛出这个对象，就会达到普通循环体continue一样的效果。<br/>
+		 * 如果有下级循环，下级循环不会被执行。<br/>
+		 * 注意：直接抛出这个对象，而不是用Error包装过的。**/
+		public static const ISTT_continue:* = '终止当前循环并执行下一次。break current loop and start next loop' ;
+		public static const ISTT____error:* = '发生了错误error。' ;
+		public static const ISTT____break:* = '终止循环break loop' ;
+		/**对循环执行回退，一般只用于调试，方便在IDE里步进观察如何发生错误，在开发环境中使用可能引起逻辑错误所以要慎用。<br>
+		 * 需要打开kuilab::dbg编译条件才会起效。另外最后一次循环时这个指令是无效的，因为我懒得去写。**/
+		public static const ISTT___repeat:* = '重新执行前次循环' ;//一般调试用。
+		
+		/**当执行函数时发生错误，会将错误交给响应函数处理，如果返回这个值，就终止执行。**/
+		public static const EVT_abort:* = ISTT____break ;//'ABORT' ;
 		//public static const PAUSE:* = 'pause 停止，但可再继续' ;
-		public static const FINISH:* = 'complete 完了' ;
+		public static const EVT_finish:* = ISTT___finish ;//'complete 完了' ;
 		
-		
-		
-		public static const ISTT___finish:* = new Pair( 'complete 完了。' ) ;;
-		public static const ISTT____pause:* = new Pair( '暂停直到空闲。Pause until idle.' ) ;
-		public static const ISTT_____stop:* = new Pair( '停止。Stop' ) ;
-		public static const ISTT_continue:* = new Pair( '终止当前循环并执行下一次。break current loop and start next loop' ) ;
-		public static const ISTT____error:* = new Pair( '发生了错误' ) ;
-		public static const ISTT____break:* = new Pair( 'break loop 终止循环' ) ;
-		kuilab::dbg public static const ISTT___repeat:* = new Pair( '重新执行前次循环' ) ;//调试用。
 		
 		/**执行完毕自然成为此状态。**/
 		public static const STAT_OVER:* = '完了。Complete。' ;
@@ -43,8 +50,8 @@ package kuilab_com.concurrent
 		/**要改个名字。**/
 		public static const LOOP_ARG__all:* = '所有相关对象()' ;
 		
-		public static const LOOP_ARGpItem:* = '使用上级的当前迭代项' ;//下级循环都要拿上级的数据来操作的。
-		public static const LOOP_ARGpProp:* = '使用上下级之间的数据传输对象' ;
+		//public static const LOOP_ARGpItem:* = '使用上级的当前迭代项' ;//下级循环都要拿上级的数据来操作的。
+		//public static const LOOP_ARGpProp:* = '使用上下级之间的数据传输对象' ;
 		public static function get LOOP_ARG_TYPES():Array
 		{
 			return [ LOOP_ARG__all, LOOP_ARG_data, LOOP_ARG_index, LOOP_ARG_none, LOOP_ARG_item, LOOP_ARG_count ] ;
@@ -59,11 +66,11 @@ package kuilab_com.concurrent
 		//public static const PARENT_prop:* = '使用上下级之间的数据传输对象' ;
 		
 		//四种循环类型，只有noLmt是被动结束（无限循环）的。
-			public static const TYPE__list:* = new Pair( 'Vector or Array 线性数据结构', null ) ;
-			public static const TYPE__tabl:* = new Pair( 'Table(Enumerable) 表（可枚举）', null );
-			public static const TYPE_count:* = new Pair( 'loop several times 运行一定的次数', null );
+			public static const TYPE__list:* = 'Vector or Array 线性数据结构' ;
+			public static const TYPE__tabl:* = 'Table(Enumerable) 表（可枚举）' ;
+			public static const TYPE_count:* = 'loop several times 运行一定的次数' ;
 			/**会检查循环体函数的返回值，如果是ISTT_BREAK就停止执行。目前只有它可以作为添加任务的第二个参数来启动无限循环。**/
-			public static const TYPE_noLmt:* = new Pair( 'until artificial stop 无限循环直到人为停止', null );
+			public static const TYPE_noLmt:* = 'until artificial stop 无限循环直到人为停止' ;
 		
 		//静态变量直接创建并赋值私有类会导致1007类无法创建的bug。
 		//protected static var NEWING_KAY_ARG:DenyNewing = function():DenyNewing{ return new DenyNewing }() ;

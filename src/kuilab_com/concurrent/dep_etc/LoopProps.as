@@ -7,8 +7,9 @@ package kuilab_com.concurrent.dep_etc
 	import kuilab_com.util.Util_object;
 
 	/**
+	 * 如果在创建进程任务时，loopArgType参数设置为LOOP_ARG__all，则循环体函数会收到这个类的实例作为参数。
+	 * 另外，作为参数传给onProg函数（即完成或出错的响应函数）的参数，收到的参数也是这个类的子类(LoopExecuteMessage)实例。
 	 * 使用时可以自己扩展，在嵌套循环中传递更多对象。
-	 * @author kui
 	 */	
 	public class LoopProps
 	{

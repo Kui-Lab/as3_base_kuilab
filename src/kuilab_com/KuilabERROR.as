@@ -39,24 +39,31 @@ package kuilab_com
 		 * @param detail
 		 * 1:不接受的参数类型。
 		 * 5:索引超出范围。
-		 * 如果是其它类型则直接输出其内容。
 		 * 10:参数的具体内容不能正常使用。
 		 * 15:参数的类型正确，但值不合理。
+		 * 如果是其它值则直接输出其内容。
 		 * @return 
 		 */		
 		public static function argsIncorrect( detail:*=null ):String
 		{
 			var ret:String = '参数使用不正确。' ;
-			if( detail == 1 )
-				detail = '不接受的参数类型。' ;
-			if( detail == 5 )
-				detail = '索引超出范围。';
-			if( detail == 10 )
-				detail = '参数的具体内容不能正常使用。' ;
-			if( detail == 15 )
-				detail = '参数的类型正确，但值不合理。' ;
-			if( Util_String.isEmptyStrOrNull( detail ) )
+			switch( detail ){
+				case 1 :
+					detail = '不接受的参数类型。' ;
+				break ;
+				case 5 :
+					detail = '索引超出范围。';
+				break ;
+				case 10 :
+					detail = '参数的具体内容不能正常使用。' ;
+				break ;
+				case 15 :
+					detail = '参数的类型正确，但值不合理。' ;
+				break ;
+				default :
+					if( Util_String.isEmptyStrOrNull( detail ) )
 				return ret ;
+			}
 			return [ ret, detail ].join( ':' ) ;
 		}
 		
@@ -97,6 +104,34 @@ package kuilab_com
 			if( Util_String.isNotEmptyOrNull( detail ) )
 				ret = ret+'(信息：{?})'.replace( '{?}', detail ) ;
 			return ret ;
+		}
+		
+		/**
+		 * 
+		 * @param detail <ul>
+		 * 	<li>0:无信息。</li>
+		 * 	<li>10:未找到类。</li>
+		 * 	<li>20:参数不正确。</li>
+		 * 	<li>30:类不是公开的。</li>
+		 * </ul>
+		 * @return 
+		 */
+		public static function creatFail( detail:* = null ):String
+		{
+			var ret:String =  '[创建对象失败。Create object fail.]' ;
+			switch( detail ){
+				case null :
+				case 0 :
+					return ret ;
+				case 10 :
+					return ret + '未找到类。Class missing.' ;
+				case 20 :
+					return ret + '参数不正确。args incorrect.' ;
+				case 30 :
+					return ret + '类不是公开的。Class is not public.' ;
+				default :
+					return ret + detail ;
+			}
 		}
 	}
 }

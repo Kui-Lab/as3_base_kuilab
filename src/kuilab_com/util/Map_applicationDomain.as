@@ -3,16 +3,27 @@ package kuilab_com.util
 	import flash.system.ApplicationDomain;
 	import flash.utils.Proxy;
 	import flash.utils.flash_proxy;
+	
+	import kuilab_com.KuilabERROR;
+
 	use namespace flash_proxy ;
 
 	public dynamic class Map_applicationDomain extends Proxy
 	{
-		public function Map_applicationDomain( vApplicationDomain:Array=null )
+		/**可以使用Array或Vector.<ApplicationDomain>**/
+		public function Map_applicationDomain( vApplicationDomain:*=null )
 		{
-			vAppDomain_ = vApplicationDomain || [] ;
+			if( vApplicationDomain == null ){
+				vAppDomain_ = [] ;
+				return ;
+			}
+			if( Util_Vector.isVectorOrArray( vApplicationDomain ) )
+				vAppDomain_ = vApplicationDomain || [] ;
+			else
+				throw new Error( KuilabERROR.argsIncorrect( 1 ) ) ;
 		}
 		
-		protected var vAppDomain_:Array
+		protected var vAppDomain_:*
 		
 		flash_proxy function addDomain( domain:ApplicationDomain ):void
 		{

@@ -13,15 +13,17 @@ package kuilab_com
 	import flash.utils.getQualifiedClassName;
 	import flash.utils.setTimeout;
 	
-	import kuilab_com.config.IParseCfgApp;
-	import kuilab_com.config.ParserConfigApp;
+	import kuilab_com.config.IIncubator;
+	import kuilab_com.config.IncubatorDefault;
 	import kuilab_com.dependInj.IDependInjectRegist;
 	import kuilab_com.net.SrvLoad;
 	import kuilab_com.util.Map_applicationDomain;
 	import kuilab_com.util.Util_Vector;
 	import kuilab_com.util.Util_object;
 	import kuilab_com.dependInj.IFactory4DepInj;
-	
+	/**
+	 * 这个类应该要做修改。
+	 */	
 	public class ManagerApp extends EventDispatcher implements IFactory4DepInj,IDependInjectRegist
 	{
 		//public static const POLICY_configGet_param:uint = 0 ;
@@ -72,16 +74,16 @@ package kuilab_com
 			protected var debug_:Object ;
 		//业务逻辑成员。
 			protected static var stage_:Stage ;
-			protected var parserConfig_:IParseCfgApp ;
+			protected var parserConfig_:IIncubator ;
 			protected var mapInterface:Object = new Dictionary ;
 			//protected var toolUrl:Object ;
 		
-		public function set parserConfig( parser:IParseCfgApp ):void
+		public function set parserConfig( parser:IIncubator ):void
 		{
 			parserConfig_ = parser ;
 		}
 		
-		public function get parserConfig():IParseCfgApp
+		public function get parserConfig():IIncubator
 		{
 			return parserConfig_ ;
 		}
@@ -130,7 +132,7 @@ package kuilab_com
 				if( e.type == Event.COMPLETE )
 				{
 					if( parserConfig_ == null )
-						parserConfig_ = new ParserConfigApp ;
+						parserConfig_ = new IncubatorDefault ;
 					try{
 						parserConfig_.dataConfig = loader.data ;
 					}catch( e:* ){ throw e }
@@ -194,7 +196,7 @@ package kuilab_com
 			{
 				return obj ;
 			}
-			/////////////尝试根据接口名称获取未注册的实现类(同时注册)。
+			/////////////尝试根据接口名称获取未注册的实现类(同时注册)。%%TODO 这个应该加参数控制。
 			var nameShort:String = nameInterface.split( '.' ).pop() ;
 			if( nameShort.charAt( 0 ) == 'I' )	//Iaaa
 			{

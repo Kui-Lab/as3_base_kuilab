@@ -86,7 +86,8 @@ package kuilab_com.util
 			return null ;
 		}
 		
-		/**我不喜欢写“a.b.c.d”，但是又想有不麻烦的取法，所以写了这个。用法：“getPropByPath( a, 'b.c.d' )”**///需要优化，getObjArr为true时没必要制造数组。%%
+		/**有时要取一个对象的孙子甚至更远的成员引用次数获取对象，比如“a.b.c.d……”会很啰嗦，所以写了这个。<br/>
+		 * 用法：“getPropByPath( a, 'b.c.d' )”**///需要优化，getObjArr为true时没必要制造数组。%%
 		public static function getPropByPath( obj:Object, names:*, spliter:String='.', notFoundValue:*=null, getObjArr:Boolean=false ):*
 		{
 			var nameArr:Array ;
